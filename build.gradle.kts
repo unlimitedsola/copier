@@ -2,7 +2,7 @@ group = "love.sola.copier"
 version = "1.0-SNAPSHOT"
 
 plugins {
-    kotlin("jvm") version "1.3.31"
+    kotlin("jvm") version "1.3.41"
 }
 
 repositories {
