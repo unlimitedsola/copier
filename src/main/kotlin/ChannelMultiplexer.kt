@@ -30,7 +30,6 @@ class ChannelMultiplexer(
             readBytes += src.read(pooledBuffer.buffer)
             pooledBuffer.buffer.rewind()
             workers.forEach { it.writingQueue.put(pooledBuffer) }
-            println("readBytes = ${readBytes / 1024 / 1024}/MB")
         }
         workers.forEach { it.isDone = true }
     }

@@ -7,13 +7,13 @@ import java.util.concurrent.atomic.AtomicInteger
 /**
  * @author Sola
  */
-class ByteBufferPool(val poolSize: Int, val bufferSize: Int, val expectedRefCount: Int) {
+class ByteBufferPool(val poolSize: Int, val bufferSize: Int, val concurrency: Int) {
 
     private val pool = LinkedBlockingQueue<PooledByteBuffer>(poolSize)
 
     init {
         repeat(poolSize) {
-            pool.put(PooledByteBuffer(ByteBuffer.allocateDirect(bufferSize), this, expectedRefCount))
+            pool.put(PooledByteBuffer(ByteBuffer.allocateDirect(bufferSize), this, concurrency))
         }
     }
 
@@ -28,9 +28,9 @@ class ByteBufferPool(val poolSize: Int, val bufferSize: Int, val expectedRefCoun
     }
 }
 
-class PooledByteBuffer(val buffer: ByteBuffer, val pool: ByteBufferPool, val expectedRefCount: Int) {
+class PooledByteBuffer(val buffer: ByteBuffer, val pool: ByteBufferPool, val concurrency: Int) {
 
-    val refCount = AtomicInteger(expectedRefCount)
+    val refCount = AtomicInteger(concurrency)
 
     fun release() {
         if (refCount.decrementAndGet() == 0) {
@@ -40,7 +40,7 @@ class PooledByteBuffer(val buffer: ByteBuffer, val pool: ByteBufferPool, val exp
 
     fun reset() {
         buffer.clear()
-        if (!refCount.compareAndSet(0, expectedRefCount)) {
+        if (!refCount.compareAndSet(0, concurrency)) {
             throw RuntimeException("unexpected CAS failure")
         }
     }

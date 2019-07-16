@@ -8,6 +8,7 @@ import java.nio.channels.ReadableByteChannel
  */
 fun main() {
     val devices = detectRemovableDrive()
+    devices.forEach { it.clean() }
     ChannelMultiplexer(DevZero(), devices.map { it.openFileChannel() }, devices[0].size)
         .start()
 }
