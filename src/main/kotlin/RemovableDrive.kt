@@ -11,6 +11,8 @@ data class RemovableDrive(val caption: String, val deviceId: String, val size: L
 
     val driveIndex = deviceId.substringAfter("PHYSICALDRIVE").toInt()
 
+    fun humanReadableByteCount() = humanReadableByteCount(size, true)
+
     fun openFileChannel(): FileChannel {
         val path = Paths.get("""\\.\GLOBALROOT\Device\Harddisk$driveIndex\Partition0""")
         return FileChannel.open(path, StandardOpenOption.READ, StandardOpenOption.WRITE)
@@ -41,6 +43,23 @@ data class RemovableDrive(val caption: String, val deviceId: String, val size: L
             process.errorStream.close()
             process.outputStream.close()
         }
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is RemovableDrive) return false
+
+        if (deviceId != other.deviceId) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return deviceId.hashCode()
+    }
+
+    override fun toString(): String {
+        return "RemovableDrive(caption='$caption', deviceId='$deviceId', size=${humanReadableByteCount()})"
     }
 }
 
