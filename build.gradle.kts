@@ -28,7 +28,6 @@ dependencies {
     implementation(kotlin("stdlib-jdk8"))
     implementation(kotlin("reflect"))
     implementation("no.tornado:tornadofx:1.7.19")
-    implementation("net.java.dev.jna:jna-platform:5.3.1")
     implementation("com.github.thomasnield:rxkotlinfx:2.2.2")
     implementation("io.reactivex.rxjava2:rxjava:2.2.10")
 }
