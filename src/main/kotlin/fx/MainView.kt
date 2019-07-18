@@ -10,6 +10,7 @@ import javafx.beans.property.SimpleObjectProperty
 import javafx.collections.SetChangeListener
 import javafx.geometry.Pos
 import javafx.scene.Parent
+import javafx.scene.control.Alert.AlertType.ERROR
 import javafx.scene.layout.Priority
 import love.sola.copier.ChannelMultiplexer
 import love.sola.copier.RemovableDrive
@@ -24,6 +25,10 @@ import kotlin.concurrent.thread
  * @author Sola
  */
 class MainView : View() {
+
+    companion object {
+        private const val SIZE_TOLERANCE = 4 * 1024 * 1024
+    }
 
     val availableDrivesProperty = observableSetOf<RemovableDrive>()
     val sourceDriveProperty = SimpleObjectProperty<RemovableDrive>()
@@ -134,8 +139,20 @@ class MainView : View() {
                     currentTask.isCancelled = true
                 } else {
                     val sourceDrive = sourceDriveProperty.get()
+                    if (sourceDrive == null) {
+                        alert(ERROR, messages["alert.no-source.title"], messages["alert.no-source.message"])
+                        return@action
+                    }
                     val targetDrives = targetDriveItems.filter { it.selected }.map { it.drive }
+                    if (targetDrives.isEmpty()) {
+                        alert(ERROR, messages["alert.no-target.title"], messages["alert.no-target.message"])
+                        return@action
+                    }
                     log.info("Task started: $sourceDrive => $targetDrives")
+                    if (!validateSizes(sourceDrive, targetDrives)) {
+                        alert(ERROR, messages["alert.size-mismatch.title"], messages["alert.size-mismatch.message"])
+                        return@action
+                    }
                     val newTask = ChannelMultiplexer(
                         sourceDrive.openFileChannel(),
                         targetDrives.map { it.openFileChannel() },
@@ -164,4 +181,7 @@ class MainView : View() {
             }
         }
     }
+
+    private fun validateSizes(source: RemovableDrive, target: List<RemovableDrive>): Boolean =
+        target.all { it.size > source.size - SIZE_TOLERANCE }
 }
