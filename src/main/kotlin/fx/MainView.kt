@@ -27,7 +27,7 @@ import kotlin.concurrent.thread
 class MainView : View() {
 
     companion object {
-        private const val SIZE_TOLERANCE = 4 * 1024 * 1024
+        private const val SIZE_TOLERANCE = 128 * 1024 * 1024
     }
 
     val availableDrivesProperty = observableSetOf<RemovableDrive>()
@@ -55,8 +55,8 @@ class MainView : View() {
     data class TargetDriveItem(val drive: RemovableDrive) {
         val selectedProperty = SimpleBooleanProperty(false)
         var selected: Boolean by selectedProperty
-        val driveIndex get() = drive.driveIndex
-        val driveTitle get() = drive.caption
+        val deviceId get() = drive.deviceId
+        val driveTitle get() = drive.name
         val driveSize get() = drive.humanReadableByteCount()
     }
 
@@ -94,7 +94,7 @@ class MainView : View() {
         label(messages["to"])
         tableview(targetDriveItems) {
             disableWhen { currentTaskProperty.isNotNull }
-            readonlyColumn(messages["drive.index"], TargetDriveItem::driveIndex)
+            readonlyColumn(messages["drive.id"], TargetDriveItem::deviceId)
             readonlyColumn(messages["drive.title"], TargetDriveItem::driveTitle)
             readonlyColumn(messages["drive.size"], TargetDriveItem::driveSize)
             column(messages["drive.selected"], TargetDriveItem::selectedProperty) { useCheckbox() }
