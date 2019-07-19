@@ -8,7 +8,7 @@ import love.sola.copier.RemovableDrive
  */
 object RemovableDriveStringFormatter : StringConverter<RemovableDrive>() {
     override fun toString(drive: RemovableDrive): String =
-        "${drive.driveIndex}: ${drive.caption} [${drive.humanReadableByteCount()}]"
+        "${drive.deviceId} ${drive.name} [${drive.humanReadableByteCount()}]"
 
     override fun fromString(string: String?): RemovableDrive? {
         throw UnsupportedOperationException()
