@@ -18,6 +18,7 @@ import love.sola.copier.detectRemovableDrive
 import love.sola.copier.humanReadableByteCount
 import tornadofx.*
 import java.text.NumberFormat
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
@@ -153,6 +154,7 @@ class MainView : View() {
                         alert(ERROR, messages["alert.size-mismatch.title"], messages["alert.size-mismatch.message"])
                         return@action
                     }
+                    batchClean(targetDrives)
                     val newTask = ChannelMultiplexer(
                         sourceDrive.openFileChannel(),
                         targetDrives.map { it.openFileChannel() },
@@ -184,4 +186,15 @@ class MainView : View() {
 
     private fun validateSizes(source: RemovableDrive, target: List<RemovableDrive>): Boolean =
         target.all { it.size > source.size - SIZE_TOLERANCE }
+
+    private fun batchClean(target: List<RemovableDrive>) {
+        val latch = CountDownLatch(target.size)
+        target.forEach {
+            thread(isDaemon = true) {
+                it.clean()
+                latch.countDown()
+            }
+        }
+        latch.await()
+    }
 }

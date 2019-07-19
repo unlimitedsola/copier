@@ -35,6 +35,33 @@ data class RemovableDrive(val caption: String, val deviceId: String, val size: L
             FILE_FLAG_NO_BUFFERING or FILE_FLAG_RANDOM_ACCESS, null
         )
 
+    /**
+     * Delete all partitions on this drive.
+     */
+    fun clean(): Boolean {
+        val process = Runtime.getRuntime().exec("diskpart")
+        try {
+            process.outputStream.write(
+                ("select disk $driveIndex\n" +
+                        "clean\n" +
+                        "exit\n")
+                    .toByteArray()
+            )
+            process.outputStream.flush()
+            process.waitFor()
+            process.inputStream.reader().useLines { lines ->
+                return lines.any { it == "DiskPart succeeded in cleaning the disk." }
+            }
+        } catch (e: Exception) {
+            throw e
+        } finally {
+            process.destroy()
+            process.inputStream.close()
+            process.errorStream.close()
+            process.outputStream.close()
+        }
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is RemovableDrive) return false
