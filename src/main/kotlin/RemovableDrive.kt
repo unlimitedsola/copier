@@ -1,8 +1,13 @@
 package love.sola.copier
 
+import com.sun.jna.Pointer
+import com.sun.jna.platform.win32.Kernel32.GENERIC_READ
+import com.sun.jna.platform.win32.WinNT.*
+import sun.misc.SharedSecrets
+import sun.nio.ch.FileChannelImpl
+import java.io.FileDescriptor
 import java.nio.channels.FileChannel
-import java.nio.file.Paths
-import java.nio.file.StandardOpenOption
+import com.sun.jna.platform.win32.Kernel32.INSTANCE as kernel32
 
 /**
  * @author Sola
@@ -14,36 +19,21 @@ data class RemovableDrive(val caption: String, val deviceId: String, val size: L
     fun humanReadableByteCount() = humanReadableByteCount(size, true)
 
     fun openFileChannel(): FileChannel {
-        val path = Paths.get("""\\.\GLOBALROOT\Device\Harddisk$driveIndex\Partition0""")
-        return FileChannel.open(path, StandardOpenOption.READ, StandardOpenOption.WRITE)
+        val fd = FileDescriptor()
+        val h = openHandle()
+        SharedSecrets.getJavaIOFileDescriptorAccess().setHandle(fd, Pointer.nativeValue(h.pointer))
+        return FileChannelImpl.open(fd, deviceId, true, true, null)
     }
 
-    /**
-     * Delete all partitions on this drive.
-     */
-    fun clean(): Boolean {
-        val process = Runtime.getRuntime().exec("diskpart")
-        try {
-            process.outputStream.write(
-                ("select disk $driveIndex\n" +
-                        "clean\n" +
-                        "exit\n")
-                    .toByteArray()
-            )
-            process.outputStream.flush()
-            process.waitFor()
-            process.inputStream.reader().useLines { lines ->
-                return lines.any { it == "DiskPart succeeded in cleaning the disk." }
-            }
-        } catch (e: Exception) {
-            throw e
-        } finally {
-            process.destroy()
-            process.inputStream.close()
-            process.errorStream.close()
-            process.outputStream.close()
-        }
-    }
+    fun openHandle(): HANDLE =
+        kernel32.CreateFile(
+            deviceId,
+            GENERIC_READ or GENERIC_WRITE,
+            FILE_SHARE_READ or FILE_SHARE_WRITE,
+            null,
+            OPEN_EXISTING,
+            FILE_FLAG_NO_BUFFERING or FILE_FLAG_RANDOM_ACCESS, null
+        )
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
