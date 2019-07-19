@@ -1,5 +1,7 @@
 package love.sola.copier
 
+import sun.nio.ch.FileChannelImpl
+import java.io.IOException
 import java.nio.channels.ReadableByteChannel
 import java.nio.channels.WritableByteChannel
 import java.util.concurrent.LinkedBlockingQueue
@@ -14,7 +16,7 @@ class ChannelMultiplexer(
     companion object {
         private const val QUEUE_SIZE = 8
         private const val POOL_SIZE = QUEUE_SIZE * 2
-        private const val BUFFER_SIZE = 64 * 1024
+        private const val BUFFER_SIZE = 64 * 512
     }
 
     private val bufferPool = ByteBufferPool(POOL_SIZE, BUFFER_SIZE, dst.size)
@@ -53,9 +55,31 @@ class ChannelMultiplexer(
         override fun run() {
             while (!isDone) {
                 val pooledBuffer = writingQueue.poll(1, SECONDS) ?: continue
-                dst.write(pooledBuffer.buffer.asReadOnlyBuffer())
+                try {
+                    retry<IOException>(4) { dst.write(pooledBuffer.buffer.asReadOnlyBuffer()) }
+                } catch (e: IOException) {
+                    throw if (dst is FileChannelImpl) {
+                        IOException("IOException at ${dst.position()}", e)
+                    } else e
+                }
                 pooledBuffer.release()
             }
+        }
+
+        private inline fun <reified T : Throwable> retry(times: Int, block: () -> Unit) {
+            var lastException: Throwable? = null
+            repeat(times) {
+                try {
+                    block()
+                    return
+                } catch (e: Throwable) {
+                    if (T::class.isInstance(e)) {
+                        lastException = e
+                        return@repeat
+                    } else throw e
+                }
+            }
+            throw lastException!!
         }
     }
 }
