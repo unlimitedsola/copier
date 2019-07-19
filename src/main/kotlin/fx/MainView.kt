@@ -162,7 +162,7 @@ class MainView : View() {
                     thread(isDaemon = true, name = "Copier-Dispatcher") { newTask.start() }
                     runAsync(daemon = true) {
                         var lastCheckedReadBytes = 0L
-                        while (!newTask.isCancelled) {
+                        while (!newTask.isCancelled && !newTask.isDone) {
                             val readBytes = newTask.readBytes
                             if (readBytes > lastCheckedReadBytes) {
                                 val speedPerSec = (readBytes - lastCheckedReadBytes) * 2
