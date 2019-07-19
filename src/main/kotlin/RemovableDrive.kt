@@ -32,7 +32,8 @@ data class RemovableDrive(val caption: String, val deviceId: String, val size: L
             FILE_SHARE_READ or FILE_SHARE_WRITE,
             null,
             OPEN_EXISTING,
-            FILE_FLAG_NO_BUFFERING or FILE_FLAG_RANDOM_ACCESS, null
+            FILE_FLAG_NO_BUFFERING or FILE_FLAG_RANDOM_ACCESS,
+            null
         )
 
     /**
