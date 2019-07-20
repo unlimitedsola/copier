@@ -1,9 +1,10 @@
-package love.sola.copier
+package love.sola.copier.util
 
 import kotlin.math.ln
 import kotlin.math.pow
 
 /**
+ * Copied from [StackOverflow](https://stackoverflow.com/questions/3758606)
  * @author Sola
  */
 fun humanReadableByteCount(bytes: Long, si: Boolean): String {

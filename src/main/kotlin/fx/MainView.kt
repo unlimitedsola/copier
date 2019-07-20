@@ -13,9 +13,9 @@ import javafx.scene.Parent
 import javafx.scene.control.Alert.AlertType.ERROR
 import javafx.scene.layout.Priority
 import love.sola.copier.ChannelMultiplexer
-import love.sola.copier.RemovableDrive
-import love.sola.copier.detectRemovableDrive
-import love.sola.copier.humanReadableByteCount
+import love.sola.copier.RemovableVolume
+import love.sola.copier.detectRemovableVolumes
+import love.sola.copier.util.humanReadableByteCount
 import tornadofx.*
 import java.text.NumberFormat
 import java.util.concurrent.TimeUnit
@@ -30,8 +30,8 @@ class MainView : View() {
         private const val SIZE_TOLERANCE = 128 * 1024 * 1024
     }
 
-    val availableDrivesProperty = observableSetOf<RemovableDrive>()
-    val sourceDriveProperty = SimpleObjectProperty<RemovableDrive>()
+    val availableVolumesProperty = observableSetOf<RemovableVolume>()
+    val sourceVolumeProperty = SimpleObjectProperty<RemovableVolume>()
     val currentTaskProperty = SimpleObjectProperty<ChannelMultiplexer>()
     val progressProperty = SimpleDoubleProperty(0.0).apply {
         currentTaskProperty.addListener { _, _, new -> if (new == null) this.set(0.0) }
@@ -44,60 +44,60 @@ class MainView : View() {
         this.title = messages["title"]
         Observable.interval(2, TimeUnit.SECONDS)
             .subscribeOn(Schedulers.io())
-            .map { detectRemovableDrive() }
+            .map { detectRemovableVolumes() }
             .observeOnFx()
             .subscribe {
-                availableDrivesProperty.retainAll(it)
-                availableDrivesProperty.addAll(it)
+                availableVolumesProperty.retainAll(it)
+                availableVolumesProperty.addAll(it)
             }
     }
 
-    data class TargetDriveItem(val drive: RemovableDrive) {
+    data class TargetVolumeItem(val volume: RemovableVolume) {
         val selectedProperty = SimpleBooleanProperty(false)
         var selected: Boolean by selectedProperty
-        val driveLetter get() = drive.letter
-        val driveName get() = drive.name
-        val driveSize get() = drive.humanReadableByteCount()
+        val volumeLetter get() = volume.letter
+        val volumeName get() = volume.name
+        val volumeSize get() = volume.humanReadableSize()
     }
 
     override val root: Parent = vbox {
         padding = insets(10)
         spacing = 10.0
-        val availableDrivesList = observableListOf<RemovableDrive>()
-        availableDrivesProperty.addListener { e: SetChangeListener.Change<out RemovableDrive> ->
+        val availableVolumesList = observableListOf<RemovableVolume>()
+        availableVolumesProperty.addListener { e: SetChangeListener.Change<out RemovableVolume> ->
             when {
-                e.wasAdded() -> availableDrivesList.add(e.elementAdded)
-                e.wasRemoved() -> availableDrivesList.remove(e.elementRemoved)
+                e.wasAdded() -> availableVolumesList.add(e.elementAdded)
+                e.wasRemoved() -> availableVolumesList.remove(e.elementRemoved)
             }
         }
         label(messages["from"])
-        combobox(sourceDriveProperty, availableDrivesList) {
+        combobox(sourceVolumeProperty, availableVolumesList) {
             disableWhen { currentTaskProperty.isNotNull }
             maxWidth = Double.MAX_VALUE
-            converter = RemovableDriveStringFormatter
+            converter = RemovableVolumeStringFormatter
         }
-        val targetDriveItems = observableListOf<TargetDriveItem>()
-        availableDrivesProperty.addListener { e: SetChangeListener.Change<out RemovableDrive> ->
+        val targetVolumeItems = observableListOf<TargetVolumeItem>()
+        availableVolumesProperty.addListener { e: SetChangeListener.Change<out RemovableVolume> ->
             when {
-                e.wasAdded() -> targetDriveItems.add(TargetDriveItem(e.elementAdded))
-                e.wasRemoved() -> targetDriveItems.removeIf { it.drive == e.elementRemoved }
+                e.wasAdded() -> targetVolumeItems.add(TargetVolumeItem(e.elementAdded))
+                e.wasRemoved() -> targetVolumeItems.removeIf { it.volume == e.elementRemoved }
             }
         }
-        sourceDriveProperty.addListener { _, old: RemovableDrive?, new: RemovableDrive? ->
+        sourceVolumeProperty.addListener { _, old: RemovableVolume?, new: RemovableVolume? ->
             if (old != null) {
-                targetDriveItems.add(TargetDriveItem(old))
+                targetVolumeItems.add(TargetVolumeItem(old))
             }
             if (new != null) {
-                targetDriveItems.removeIf { it.drive == new }
+                targetVolumeItems.removeIf { it.volume == new }
             }
         }
         label(messages["to"])
-        tableview(targetDriveItems) {
+        tableview(targetVolumeItems) {
             disableWhen { currentTaskProperty.isNotNull }
-            readonlyColumn(messages["drive.letter"], TargetDriveItem::driveLetter)
-            readonlyColumn(messages["drive.name"], TargetDriveItem::driveName)
-            readonlyColumn(messages["drive.size"], TargetDriveItem::driveSize)
-            column(messages["drive.selected"], TargetDriveItem::selectedProperty) { useCheckbox() }
+            readonlyColumn(messages["volume.letter"], TargetVolumeItem::volumeLetter)
+            readonlyColumn(messages["volume.name"], TargetVolumeItem::volumeName)
+            readonlyColumn(messages["volume.size"], TargetVolumeItem::volumeSize)
+            column(messages["volume.selected"], TargetVolumeItem::selectedProperty) { useCheckbox() }
             smartResize()
         }
         progressbar(progressProperty) {
@@ -136,27 +136,27 @@ class MainView : View() {
             action {
                 val currentTask = currentTaskProperty.get()
                 if (currentTask != null) {
-                    currentTask.isCancelled = true
+                    currentTask.cancel()
                 } else {
-                    val sourceDrive = sourceDriveProperty.get()
-                    if (sourceDrive == null) {
+                    val sourceVolume = sourceVolumeProperty.get()
+                    if (sourceVolume == null) {
                         alert(ERROR, messages["alert.no-source.title"], messages["alert.no-source.message"])
                         return@action
                     }
-                    val targetDrives = targetDriveItems.filter { it.selected }.map { it.drive }
-                    if (targetDrives.isEmpty()) {
+                    val targetVolumes = targetVolumeItems.filter { it.selected }.map { it.volume }
+                    if (targetVolumes.isEmpty()) {
                         alert(ERROR, messages["alert.no-target.title"], messages["alert.no-target.message"])
                         return@action
                     }
-                    log.info("Task started: $sourceDrive => $targetDrives")
-                    if (!validateSizes(sourceDrive, targetDrives)) {
+                    log.info("Task started: $sourceVolume => $targetVolumes")
+                    if (!validateSizes(sourceVolume, targetVolumes)) {
                         alert(ERROR, messages["alert.size-mismatch.title"], messages["alert.size-mismatch.message"])
                         return@action
                     }
                     val newTask = ChannelMultiplexer(
-                        sourceDrive.openFileChannel(),
-                        targetDrives.map { it.openFileChannel() },
-                        sourceDrive.size
+                        sourceVolume.openFileChannel(),
+                        targetVolumes.map { it.openFileChannel() },
+                        sourceVolume.size
                     )
                     currentTaskProperty.set(newTask)
                     thread(isDaemon = true, name = "Copier-Dispatcher") { newTask.start() }
@@ -182,6 +182,6 @@ class MainView : View() {
         }
     }
 
-    private fun validateSizes(source: RemovableDrive, target: List<RemovableDrive>): Boolean =
+    private fun validateSizes(source: RemovableVolume, target: List<RemovableVolume>): Boolean =
         target.all { it.size > source.size - SIZE_TOLERANCE }
 }

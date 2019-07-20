@@ -1,10 +1,13 @@
-package love.sola.copier
+package love.sola.copier.util
 
 import java.nio.ByteBuffer
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
+ * A thread-safe pool of [ByteBuffer]s so we don't have to allocate them again and again
+ *
+ * @param concurrency the amount of releasing is required before putting back into the pool
  * @author Sola
  */
 class ByteBufferPool(val poolSize: Int, val bufferSize: Int, val concurrency: Int) {
@@ -28,16 +31,29 @@ class ByteBufferPool(val poolSize: Int, val bufferSize: Int, val concurrency: In
     }
 }
 
-class PooledByteBuffer(val buffer: ByteBuffer, val pool: ByteBufferPool, val concurrency: Int) {
+/**
+ * A thread-safe [ByteBuffer] wrapper for pooling, stores [refCount] for counting acquired references.
+ */
+class PooledByteBuffer(val buffer: ByteBuffer, val pool: ByteBufferPool, private val concurrency: Int) {
 
-    val refCount = AtomicInteger(concurrency)
+    private val refCount = AtomicInteger(concurrency)
 
+    /**
+     * release this buffer once, which decreases the [refCount] by 1.
+     * when [refCount] goes to zero, we consider this buffer is not used anymore,
+     * so we put it back into the pool where it belongs.
+     */
     fun release() {
         if (refCount.decrementAndGet() == 0) {
             pool.returnToPool(this)
         }
     }
 
+    /**
+     * internal function, shouldn't invoked by user.
+     * resets this buffer's position status for further reusing.
+     * also resets the [refCount] to the desired [concurrency]
+     */
     fun reset() {
         buffer.clear()
         if (!refCount.compareAndSet(0, concurrency)) {

@@ -7,8 +7,8 @@ import java.nio.channels.ReadableByteChannel
  * @author Sola
  */
 fun main() {
-    val devices = detectRemovableDrive()
-    ChannelMultiplexer(DevZero(), devices.map { it.openFileChannel() }, devices[0].size)
+    val volumes = detectRemovableVolumes()
+    ChannelMultiplexer(DevZero(), volumes.map { it.openFileChannel() }, volumes[0].size)
         .start()
 }
 

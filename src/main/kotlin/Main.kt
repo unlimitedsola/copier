@@ -5,6 +5,7 @@ import love.sola.copier.fx.CopierApp
 import tornadofx.launch
 
 /**
+ * Should I document this?!
  * @author Sola
  */
 fun main(args: Array<String>) {

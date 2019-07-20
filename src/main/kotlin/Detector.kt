@@ -6,11 +6,14 @@ package love.sola.copier
 val WMIC_CMD =
     """wmic LOGICALDISK WHERE DriveType=2 GET VolumeName,DEVICEID,SIZE /format:list"""
 
-fun detectRemovableDrive(): List<RemovableDrive> {
+/**
+ * query all USB volumes by using wmic command.
+ */
+fun detectRemovableVolumes(): List<RemovableVolume> {
     val process = Runtime.getRuntime().exec(WMIC_CMD)
     try {
         process.waitFor()
-        val result = arrayListOf<RemovableDrive>()
+        val result = arrayListOf<RemovableVolume>()
         process.inputStream.reader().useLines { lines ->
             val iter = lines.filter { it.isNotEmpty() }.iterator()
             while (iter.hasNext()) {
@@ -19,7 +22,7 @@ fun detectRemovableDrive(): List<RemovableDrive> {
                     val (k, v) = iter.next().split('=', limit = 2)
                     paramMap[k] = v
                 }
-                result += RemovableDrive(
+                result += RemovableVolume(
                     paramMap["VolumeName"]!!,
                     paramMap["DeviceID"]!!,
                     paramMap["Size"]!!.toLongOrNull() ?: 0
