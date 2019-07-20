@@ -19,7 +19,11 @@ fun detectRemovableDrive(): List<RemovableDrive> {
                     val (k, v) = iter.next().split('=', limit = 2)
                     paramMap[k] = v
                 }
-                result += RemovableDrive(paramMap["VolumeName"]!!, paramMap["DeviceID"]!!, paramMap["Size"]!!.toLong())
+                result += RemovableDrive(
+                    paramMap["VolumeName"]!!,
+                    paramMap["DeviceID"]!!,
+                    paramMap["Size"]!!.toLongOrNull() ?: 0
+                )
             }
         }
         return result

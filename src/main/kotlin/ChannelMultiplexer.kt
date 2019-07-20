@@ -40,6 +40,7 @@ class ChannelMultiplexer(
         }
         if (!isCancelled) isDone = true
         workers.forEach { it.isDone = true }
+        src.close()
     }
 
     class Worker(private val dst: WritableByteChannel) : Thread("ChannelMultiplexer-Worker") {
@@ -64,6 +65,7 @@ class ChannelMultiplexer(
                 }
                 pooledBuffer.release()
             }
+            dst.close()
         }
 
         private inline fun <reified T : Throwable> retry(times: Int, block: () -> Unit) {

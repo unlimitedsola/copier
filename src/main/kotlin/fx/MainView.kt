@@ -18,7 +18,6 @@ import love.sola.copier.detectRemovableDrive
 import love.sola.copier.humanReadableByteCount
 import tornadofx.*
 import java.text.NumberFormat
-import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
@@ -56,8 +55,8 @@ class MainView : View() {
     data class TargetDriveItem(val drive: RemovableDrive) {
         val selectedProperty = SimpleBooleanProperty(false)
         var selected: Boolean by selectedProperty
-        val deviceId get() = drive.deviceId
-        val driveTitle get() = drive.name
+        val driveLetter get() = drive.letter
+        val driveName get() = drive.name
         val driveSize get() = drive.humanReadableByteCount()
     }
 
@@ -95,8 +94,8 @@ class MainView : View() {
         label(messages["to"])
         tableview(targetDriveItems) {
             disableWhen { currentTaskProperty.isNotNull }
-            readonlyColumn(messages["drive.id"], TargetDriveItem::deviceId)
-            readonlyColumn(messages["drive.title"], TargetDriveItem::driveTitle)
+            readonlyColumn(messages["drive.letter"], TargetDriveItem::driveLetter)
+            readonlyColumn(messages["drive.name"], TargetDriveItem::driveName)
             readonlyColumn(messages["drive.size"], TargetDriveItem::driveSize)
             column(messages["drive.selected"], TargetDriveItem::selectedProperty) { useCheckbox() }
             smartResize()
@@ -154,7 +153,6 @@ class MainView : View() {
                         alert(ERROR, messages["alert.size-mismatch.title"], messages["alert.size-mismatch.message"])
                         return@action
                     }
-                    batchClean(targetDrives)
                     val newTask = ChannelMultiplexer(
                         sourceDrive.openFileChannel(),
                         targetDrives.map { it.openFileChannel() },
@@ -186,15 +184,4 @@ class MainView : View() {
 
     private fun validateSizes(source: RemovableDrive, target: List<RemovableDrive>): Boolean =
         target.all { it.size > source.size - SIZE_TOLERANCE }
-
-    private fun batchClean(target: List<RemovableDrive>) {
-        val latch = CountDownLatch(target.size)
-        target.forEach {
-            thread(isDaemon = true) {
-                it.clean()
-                latch.countDown()
-            }
-        }
-        latch.await()
-    }
 }
