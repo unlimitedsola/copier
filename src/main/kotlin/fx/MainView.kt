@@ -11,6 +11,9 @@ import javafx.collections.SetChangeListener
 import javafx.geometry.Pos
 import javafx.scene.Parent
 import javafx.scene.control.Alert.AlertType.ERROR
+import javafx.scene.control.Alert.AlertType.WARNING
+import javafx.scene.control.ButtonType.CANCEL
+import javafx.scene.control.ButtonType.OK
 import javafx.scene.layout.Priority
 import love.sola.copier.ChannelMultiplexer
 import love.sola.copier.RemovableVolume
@@ -139,27 +142,13 @@ class MainView : View() {
                     currentTask.cancel()
                 } else {
                     val sourceVolume = sourceVolumeProperty.get()
-                    if (sourceVolume == null) {
-                        alert(ERROR, messages["alert.no-source.title"], messages["alert.no-source.message"])
-                        return@action
-                    }
                     val targetVolumes = targetVolumeItems.filter { it.selected }.map { it.volume }
-                    if (targetVolumes.isEmpty()) {
-                        alert(ERROR, messages["alert.no-target.title"], messages["alert.no-target.message"])
-                        return@action
-                    }
-                    log.info("Task started: $sourceVolume => $targetVolumes")
-                    if (!validateSizes(sourceVolume, targetVolumes)) {
-                        alert(ERROR, messages["alert.size-mismatch.title"], messages["alert.size-mismatch.message"])
-                        return@action
-                    }
-                    val newTask = ChannelMultiplexer(
-                        sourceVolume.openFileChannel(),
-                        targetVolumes.map { it.openFileChannel() },
-                        sourceVolume.size
-                    )
+                    val newTask = createTask(sourceVolume, targetVolumes) ?: return@action
                     currentTaskProperty.set(newTask)
-                    thread(isDaemon = true, name = "Copier-Dispatcher") { newTask.start() }
+                    thread(isDaemon = true, name = "Copier-Dispatcher") {
+                        log.info("Task started: $sourceVolume => $targetVolumes, length=${newTask.length}")
+                        newTask.start()
+                    }
                     runAsync(daemon = true) {
                         var lastCheckedReadBytes = 0L
                         while (!newTask.isCancelled && !newTask.isDone) {
@@ -182,6 +171,28 @@ class MainView : View() {
         }
     }
 
-    private fun validateSizes(source: RemovableVolume, target: List<RemovableVolume>): Boolean =
-        target.all { it.size > source.size - SIZE_TOLERANCE }
+    private fun createTask(source: RemovableVolume?, target: List<RemovableVolume>): ChannelMultiplexer? {
+        if (source == null) {
+            alert(ERROR, messages["alert.no-source.title"], messages["alert.no-source.message"])
+            return null
+        }
+        if (target.isEmpty()) {
+            alert(ERROR, messages["alert.no-target.title"], messages["alert.no-target.message"])
+            return null
+        }
+        val size = determineSize(source, target)
+        if (size < source.size - SIZE_TOLERANCE) {
+            alert(WARNING, messages["alert.size-mismatch.title"], messages["alert.size-mismatch.message"], OK, CANCEL) {
+                if (it == CANCEL) return null
+            }
+        }
+        return ChannelMultiplexer(
+            source.openFileChannel(),
+            target.map { it.openFileChannel() },
+            size
+        )
+    }
+
+    private fun determineSize(source: RemovableVolume, target: List<RemovableVolume>): Long =
+        (target + source).minBy { it.size }!!.size
 }
