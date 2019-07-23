@@ -1,3 +1,4 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 group = "love.sola.copier"
@@ -12,6 +13,10 @@ plugins {
 application {
     mainClassName = "love.sola.copier.MainKt"
     applicationDefaultJvmArgs = listOf("-Xmx32M", "-XX:+UseSerialGC", "-XX:ReservedCodeCacheSize=16m")
+}
+
+tasks.withType<ShadowJar> {
+    mergeServiceFiles()
 }
 
 tasks.withType<KotlinCompile> {
