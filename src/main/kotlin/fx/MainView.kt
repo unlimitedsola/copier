@@ -29,10 +29,6 @@ import kotlin.concurrent.thread
  */
 class MainView : View() {
 
-    companion object {
-        private const val SIZE_TOLERANCE = 128 * 1024 * 1024
-    }
-
     val availableVolumesProperty = observableSetOf<RemovableVolume>()
     val sourceVolumeProperty = SimpleObjectProperty<RemovableVolume>()
     val currentTaskProperty = SimpleObjectProperty<ChannelMultiplexer>()
@@ -181,7 +177,7 @@ class MainView : View() {
             return null
         }
         val size = determineSize(source, target)
-        if (size < source.size - SIZE_TOLERANCE) {
+        if (size < source.size * 0.99) { // 1% tolerance
             alert(WARNING, messages["alert.size-mismatch.title"], messages["alert.size-mismatch.message"], OK, CANCEL) {
                 if (it == CANCEL) return null
             }
