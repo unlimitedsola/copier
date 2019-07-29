@@ -94,9 +94,11 @@ class MainView : View() {
         }
         label(messages["to"])
         tableview(targetVolumeItems) {
+            maxHeight = Double.MAX_VALUE
+            vgrow = Priority.ALWAYS
             disableWhen { currentTaskProperty.isNotNull }
             readonlyColumn(messages["volume.letter"], TargetVolumeItem::volumeLetter)
-            readonlyColumn(messages["volume.name"], TargetVolumeItem::volumeName)
+            readonlyColumn(messages["volume.name"], TargetVolumeItem::volumeName).remainingWidth()
             readonlyColumn(messages["volume.size"], TargetVolumeItem::volumeSize)
             column(messages["volume.selected"], TargetVolumeItem::selectedProperty) { useCheckbox() }
             smartResize()
