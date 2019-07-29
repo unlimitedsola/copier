@@ -20,6 +20,8 @@ import love.sola.copier.RemovableVolume
 import love.sola.copier.detectRemovableVolumes
 import love.sola.copier.util.humanReadableByteCount
 import tornadofx.*
+import java.text.MessageFormat
+import java.text.MessageFormat.*
 import java.text.NumberFormat
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
@@ -178,7 +180,13 @@ class MainView : View() {
         }
         val size = determineSize(source, target)
         if (size < source.size * 0.99) { // 1% tolerance
-            alert(WARNING, messages["alert.size-mismatch.title"], messages["alert.size-mismatch.message"], OK, CANCEL) {
+            alert(
+                WARNING,
+                messages["alert.size-mismatch.title"],
+                format(messages["alert.size-mismatch.message"], humanReadableByteCount(size, true)),
+                OK,
+                CANCEL
+            ) {
                 if (it == CANCEL) return null
             }
         }
