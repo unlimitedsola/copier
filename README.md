@@ -3,6 +3,7 @@
 _A fast parallel copying utility._
 
 [![License](https://img.shields.io/github/license/unlimitedsola/copier?style=flat-square)](https://github.com/unlimitedsola/copier/blob/master/LICENSE.txt)
+[![Version](https://img.shields.io/github/release/unlimitedsola/copier?style=flat-square)](https://github.com/unlimitedsola/copier/releases)
 
 ## Features
 
